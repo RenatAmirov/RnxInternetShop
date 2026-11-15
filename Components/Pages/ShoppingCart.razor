@@ -1,0 +1,86 @@
+@page "/cart"
+@inject Orders Orders
+@inject ShopSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>Корзина — Тихий дом</PageTitle>
+
+<section class="container subpage">
+    <a class="back-link" href="/#catalog"><Icon Name="back" /> К каталогу</a>
+    <div class="page-heading">
+        <h1>Корзина</h1>
+        @if (cart.Count > 0)
+        {
+            <span>@ItemCount(cart.Count)</span>
+        }
+    </div>
+    @if (cart.Count == 0)
+    {
+        <div class="panel empty-state">
+            <span class="empty-icon"><Icon Name="bag" /></span>
+            <h2>В корзине пока пусто</h2>
+            <a class="button button-primary" href="/#catalog">Смотреть каталог <Icon Name="arrow" /></a>
+        </div>
+    }
+    else
+    {
+        <div class="split">
+            <div class="panel lines">
+                @foreach (var item in cart.Items)
+                {
+                    <article class="cart-row">
+                        <img src="@Image(item.Image)" width="86" height="86" alt="@item.Name" />
+                        <div class="line-title">
+                            <h2>@item.Name</h2>
+                            <span>@Money(item.UnitPrice) за шт.</span>
+                        </div>
+                        <div class="quantity" aria-label="Количество">
+                            <form method="post" @formname="@($"minus-{item.ProductId}")"
+                                  @onsubmit="() => ChangeAsync(item.ProductId, CartChange.Decrease)">
+                                <AntiforgeryToken />
+                                <button type="submit" aria-label="@($"Уменьшить количество: {item.Name}")"><Icon Name="minus" /></button>
+                            </form>
+                            <span>@item.Quantity</span>
+                            <form method="post" @formname="@($"plus-{item.ProductId}")"
+                                  @onsubmit="() => ChangeAsync(item.ProductId, CartChange.Add)">
+                                <AntiforgeryToken />
+                                <button type="submit" disabled="@(item.Quantity >= MaxQuantity)"
+                                        aria-label="@($"Увеличить количество: {item.Name}")"><Icon Name="plus" /></button>
+                            </form>
+                        </div>
+                        <strong class="line-total">@Money(item.Total)</strong>
+                        <form method="post" @formname="@($"remove-{item.ProductId}")"
+                              @onsubmit="() => ChangeAsync(item.ProductId, CartChange.Remove)">
+                            <AntiforgeryToken />
+                            <button class="remove-button" type="submit" aria-label="@($"Убрать: {item.Name}")" title="Убрать">
+                                <Icon Name="close" />
+                            </button>
+                        </form>
+                    </article>
+                }
+            </div>
+            <PriceSummary Count="@cart.Count" Subtotal="@cart.Subtotal" Shipping="@ShippingFor(cart.Subtotal)">
+                <a class="button button-primary button-wide" href="/checkout">Перейти к оформлению <Icon Name="arrow" /></a>
+                @if (cart.Subtotal < FreeShippingFrom)
+                {
+                    <p class="summary-hint">До бесплатной доставки @Money(FreeShippingFrom - cart.Subtotal)</p>
+                }
+            </PriceSummary>
+        </div>
+    }
+</section>
+
+@code {
+    private Cart cart = new(Guid.Empty, []);
+
+    protected override async Task OnInitializedAsync()
+    {
+        cart = await Orders.GetCartAsync(Session.Owner, Session.Cancellation);
+    }
+
+    private async Task ChangeAsync(int productId, CartChange change)
+    {
+        await Orders.ChangeCartAsync(Session.Owner, productId, change, Session.Cancellation);
+        Navigation.NavigateTo("/cart", replace: true);
+    }
+}

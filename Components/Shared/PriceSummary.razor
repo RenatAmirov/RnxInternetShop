@@ -1,0 +1,16 @@
+<aside class="panel summary" aria-label="Сумма заказа">
+    <h2>Ваш заказ</h2>
+    <dl>
+        <div><dt>@ItemCount(Count)</dt><dd>@Money(Subtotal)</dd></div>
+        <div><dt>Доставка</dt><dd>@(Shipping == 0 ? "Бесплатно" : Money(Shipping))</dd></div>
+        <div class="summary-total"><dt>Итого</dt><dd>@Money(Subtotal + Shipping)</dd></div>
+    </dl>
+    @ChildContent
+</aside>
+
+@code {
+    [Parameter] public int Count { get; set; }
+    [Parameter] public decimal Subtotal { get; set; }
+    [Parameter] public decimal Shipping { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

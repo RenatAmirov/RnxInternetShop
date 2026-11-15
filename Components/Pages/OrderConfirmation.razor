@@ -1,0 +1,69 @@
+@page "/orders/{OrderId:guid}"
+@inject Orders Orders
+@inject ShopSession Session
+@inject NavigationManager Navigation
+
+@if (order is not null)
+{
+    <PageTitle>Заказ №@order.Number — Тихий дом</PageTitle>
+    <section class="container subpage">
+        <a class="back-link" href="/orders"><Icon Name="back" /> Мои заказы</a>
+        <div class="confirmation-header">
+            <span class="empty-icon"><Icon Name="check" /></span>
+            <div>
+                <h1>Заказ №@order.Number принят</h1>
+                <p>Спасибо, @order.Name! Подтверждение отправим на <strong>@order.Email</strong>.</p>
+            </div>
+        </div>
+        <div class="split">
+            <div class="confirmation-details">
+                <section class="panel details">
+                    <h2>Состав заказа</h2>
+                    @foreach (var item in order.Items)
+                    {
+                        <div class="order-item">
+                            <img src="@Image(item.Image)" width="64" height="64" alt="" />
+                            <div><strong>@item.Name</strong><span>@item.Quantity шт.</span></div>
+                            <strong>@Money(item.Total)</strong>
+                        </div>
+                    }
+                </section>
+                <section class="panel details">
+                    <h2>Доставка</h2>
+                    <p class="shipping-address">@order.Address</p>
+                    @if (order.Phone is { } phone)
+                    {
+                        <p class="field-hint">SMS-подтверждение на @phone</p>
+                    }
+                </section>
+                <section class="panel details">
+                    <h2 class="icon-heading"><Icon Name="bell" /> Уведомления</h2>
+                    @if (order.Notification is { } notification)
+                    {
+                        <p>@notification</p>
+                    }
+                    else
+                    {
+                        <p>Уведомление появится после обработки заказа.</p>
+                        <a class="text-link" href="@($"/orders/{OrderId}")" data-enhance-nav="false">Обновить страницу</a>
+                    }
+                </section>
+            </div>
+            <PriceSummary Count="@order.Items.Sum(item => item.Quantity)" Subtotal="@order.Subtotal" Shipping="@order.Shipping">
+                <a class="button button-secondary button-wide" href="/#catalog">Продолжить покупки <Icon Name="arrow" /></a>
+            </PriceSummary>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public Guid OrderId { get; set; }
+    private OrderDetails? order;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        order = await Orders.FindAsync(Session.Owner, OrderId, Session.Cancellation);
+        if (order is null)
+            Navigation.NotFound();
+    }
+}

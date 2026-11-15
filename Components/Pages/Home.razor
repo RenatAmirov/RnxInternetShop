@@ -1,0 +1,114 @@
+@page "/"
+@inject Catalog Catalog
+@inject Orders Orders
+@inject ShopSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>Тихий дом — товары для дома</PageTitle>
+
+<div class="container">
+    <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+            <p class="eyebrow"><span></span> Коллекция для дома</p>
+            <h1 id="hero-title">Дом, в котором<br class="desktop-break" /> хочется быть.</h1>
+            <p class="hero-description">Посуда, текстиль и декор из натуральных материалов для уютного дома.</p>
+            <a class="button button-primary" href="#catalog">Смотреть каталог <Icon Name="arrow" /></a>
+        </div>
+        <div class="hero-image">
+            <img src="/images/hero.webp" alt="Керамическая ваза, оливковая ветвь и льняной текстиль в солнечном интерьере"
+                 width="1440" height="960" fetchpriority="high" />
+        </div>
+    </section>
+
+    <section class="benefits" id="delivery" aria-label="Доставка, упаковка и материалы">
+        <div class="benefit">
+            <span class="benefit-icon"><Icon Name="truck" /></span>
+            <div><h2>Доставка до двери</h2><p>@Money(StandardShipping) · бесплатно от @Money(FreeShippingFrom)</p></div>
+        </div>
+        <div class="benefit">
+            <span class="benefit-icon"><Icon Name="leaf" /></span>
+            <div><h2>Натуральные материалы</h2><p>Керамика, лён и хлопок</p></div>
+        </div>
+        <div class="benefit">
+            <span class="benefit-icon"><Icon Name="box" /></span>
+            <div><h2>Бережная упаковка</h2><p>Защищаем каждый предмет</p></div>
+        </div>
+    </section>
+
+    <section class="catalog" id="catalog" aria-labelledby="catalog-title">
+        <div class="catalog-heading">
+            <h2 id="catalog-title">Каталог</h2>
+            <span>@ItemCount(visibleProducts.Count)</span>
+        </div>
+        <nav class="categories" aria-label="Категории товаров">
+            @foreach (var (key, label) in Categories)
+            {
+                <a href="@CatalogUrl(key)" class="category @(activeCategory == key ? "selected" : null)"
+                   aria-current="@(activeCategory == key ? "true" : null)">@label</a>
+            }
+        </nav>
+        @if (Added is not null)
+        {
+            <div class="inline-notice" role="status">
+                <Icon Name="check" /> Товар добавлен. <a href="/cart">Открыть корзину</a>
+            </div>
+        }
+        @if (Limit)
+        {
+            <div class="inline-notice" role="status">В корзину можно добавить до @MaxQuantity единиц каждого товара.</div>
+        }
+        <div class="product-grid">
+            @foreach (var product in visibleProducts)
+            {
+                <article class="product-card" id="@($"product-{product.Id}")">
+                    <div class="product-photo">
+                        <img src="@Image(product.Image)" width="512" height="512" alt="@product.Name" loading="lazy" />
+                    </div>
+                    <div class="product-info">
+                        <div>
+                            <h3>@product.Name</h3>
+                            <p>@product.Description</p>
+                            <strong>@Money(product.Price)</strong>
+                        </div>
+                        <form method="post" @formname="@($"add-{product.Id}")" @onsubmit="() => AddAsync(product.Id)">
+                            <AntiforgeryToken />
+                            <button class="add-button @(Added == product.Id ? "just-added" : null)" type="submit"
+                                    aria-label="@($"В корзину: {product.Name}")" title="В корзину">
+                                <Icon Name="@(Added == product.Id ? "check" : "plus")" />
+                            </button>
+                        </form>
+                    </div>
+                </article>
+            }
+        </div>
+    </section>
+</div>
+
+@code {
+    private static readonly (string Key, string Label)[] Categories =
+        [("", "Все товары"), ("table", "Посуда"), ("textile", "Текстиль"), ("decor", "Декор")];
+
+    [SupplyParameterFromQuery(Name = "category")] public string? Category { get; set; }
+    [SupplyParameterFromQuery(Name = "added")] public int? Added { get; set; }
+    [SupplyParameterFromQuery(Name = "limit")] public bool Limit { get; set; }
+
+    private string activeCategory = "";
+    private IReadOnlyList<Product> visibleProducts = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        activeCategory = Categories.Any(category => category.Key == Category) ? Category! : "";
+        var all = await Catalog.GetAsync(Session.Cancellation);
+        visibleProducts = activeCategory == "" ? all : all.Where(p => p.Category == activeCategory).ToArray();
+    }
+
+    private static string CatalogUrl(string key) => key == "" ? "/#catalog" : $"/?category={key}#catalog";
+
+    private async Task AddAsync(int id)
+    {
+        var changed = await Orders.ChangeCartAsync(Session.Owner, id, CartChange.Add, Session.Cancellation);
+        var category = activeCategory == "" ? "" : $"category={activeCategory}&";
+        var result = changed ? $"added={id}" : "limit=true";
+        Navigation.NavigateTo($"/?{category}{result}#catalog", replace: true);
+    }
+}

@@ -1,0 +1,59 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Diagnostics
+@inject Orders Orders
+@inject ShopSession Session
+@inject NavigationManager Navigation
+
+<a class="skip-link" href="@(new Uri(Navigation.Uri).PathAndQuery + "#main")">Перейти к содержанию</a>
+<div class="announcement">
+    <Icon Name="truck" />
+    <span>Бесплатная доставка от @Money(FreeShippingFrom)</span>
+</div>
+
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="wordmark" href="/" aria-label="Тихий дом, главная">
+            <Icon Name="brand" />
+            <span>тихий дом<span class="brand-dot">.</span></span>
+        </a>
+        <nav class="main-nav" aria-label="Основное меню">
+            <a href="/#catalog">Каталог</a>
+            <a href="/#delivery">Доставка</a>
+            <NavLink href="/orders">Мои заказы</NavLink>
+        </nav>
+        <a class="cart-link" href="/cart" aria-label="@($"Корзина, {ItemCount(cartCount)}")">
+            <Icon Name="bag" />
+            <span class="cart-link-label">Корзина</span>
+            <span class="cart-count">@cartCount</span>
+        </a>
+    </div>
+</header>
+
+<main id="main" class="site-main" tabindex="-1">
+    @Body
+</main>
+
+<footer class="site-footer">
+    <div class="container footer-inner">
+        <a class="wordmark" href="/" aria-label="Тихий дом, главная">
+            <Icon Name="brand" />
+            <span>тихий дом<span class="brand-dot">.</span></span>
+        </a>
+        <span class="footer-description">Посуда, текстиль и декор для дома</span>
+        <nav aria-label="Меню в подвале">
+            <a href="/#catalog">Каталог</a>
+            <a href="/orders">Мои заказы</a>
+        </nav>
+    </div>
+</footer>
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = null!;
+    private int cartCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (HttpContext.Features.Get<IExceptionHandlerFeature>() is null)
+            cartCount = (await Orders.GetCartAsync(Session.Owner, Session.Cancellation)).Count;
+    }
+}

@@ -1,0 +1,112 @@
+@page "/checkout"
+@using Microsoft.Extensions.Options
+@using RnxInternetShop.Messaging
+@inject Orders Orders
+@inject ShopSession Session
+@inject IOptions<SmsOptions> Sms
+@inject NavigationManager Navigation
+
+<PageTitle>Оформление заказа — Тихий дом</PageTitle>
+
+<section class="container subpage">
+    <a class="back-link" href="/cart"><Icon Name="back" /> К корзине</a>
+    <div class="page-heading"><h1>Оформление заказа</h1></div>
+    @if (cart.Count == 0 && !IsPost)
+    {
+        <div class="panel empty-state">
+            <span class="empty-icon"><Icon Name="bag" /></span>
+            <h2>Добавьте товары в корзину</h2>
+            <a class="button button-primary" href="/#catalog">Смотреть каталог <Icon Name="arrow" /></a>
+        </div>
+    }
+    else
+    {
+        <div class="split">
+            <EditForm class="panel checkout-form" method="post" Model="@Input" FormName="checkout" OnValidSubmit="PlaceAsync">
+                <DataAnnotationsValidator />
+                <input type="hidden" name="Input.Revision" value="@Input!.Revision" />
+                <h2>Контакты и доставка</h2>
+                @if (error is not null)
+                {
+                    <p class="form-error" role="alert">@error</p>
+                }
+                <div class="form-field">
+                    <label for="buyer-name">Имя</label>
+                    <InputText id="buyer-name" @bind-Value="Input.Name" autocomplete="name" maxlength="100" required />
+                    <ValidationMessage For="@(() => Input.Name)" />
+                </div>
+                <div class="form-field">
+                    <label for="buyer-email">Электронная почта</label>
+                    <InputText id="buyer-email" type="email" @bind-Value="Input.Email" autocomplete="email" maxlength="254" required />
+                    <ValidationMessage For="@(() => Input.Email)" />
+                </div>
+                <div class="form-field">
+                    <label for="buyer-address">Адрес доставки</label>
+                    <InputTextArea id="buyer-address" @bind-Value="Input.Address" autocomplete="street-address" rows="3"
+                                   placeholder="Город, улица, дом, квартира" maxlength="500" required />
+                    <ValidationMessage For="@(() => Input.Address)" />
+                </div>
+                @if (Sms.Value.Available)
+                {
+                    <div class="sms-option">
+                        <label class="checkbox-label">
+                            <InputCheckbox @bind-Value="Input.SmsRequested" />
+                            <span>Получить подтверждение по SMS</span>
+                        </label>
+                        <div class="form-field">
+                            <label for="buyer-phone">Телефон для SMS</label>
+                            <InputText id="buyer-phone" type="tel" @bind-Value="Input.Phone" autocomplete="tel"
+                                       placeholder="+79991234567" maxlength="16" />
+                            <ValidationMessage For="@(() => Input.Phone)" />
+                        </div>
+                        @if (Sms.Value.Webhook is null)
+                        {
+                            <p class="field-hint">Демонстрационный режим SMS</p>
+                        }
+                    </div>
+                }
+                <button class="button button-primary checkout-submit" disabled="@(cart.Count == 0 && error is not null)" type="submit">
+                    Оформить заказ <Icon Name="arrow" />
+                </button>
+            </EditForm>
+            <PriceSummary Count="@cart.Count" Subtotal="@cart.Subtotal" Shipping="@ShippingFor(cart.Subtotal)" />
+        </div>
+    }
+</section>
+
+@code {
+    [SupplyParameterFromForm(FormName = "checkout")] private CheckoutForm? Input { get; set; }
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = null!;
+
+    private bool IsPost => HttpMethods.IsPost(HttpContext.Request.Method);
+    private Cart cart = new(Guid.Empty, []);
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        cart = await Orders.GetCartAsync(Session.Owner, Session.Cancellation);
+        Input ??= new CheckoutForm { Revision = cart.Revision };
+    }
+
+    private async Task PlaceAsync()
+    {
+        if (Input!.SmsRequested && !Sms.Value.Available)
+        {
+            error = "SMS сейчас недоступны. Откройте страницу оформления заново.";
+            return;
+        }
+
+        var orderId = await Orders.PlaceAsync(Session.Owner, Input, Session.Cancellation);
+        if (orderId is Guid id)
+        {
+            Navigation.NavigateTo($"/orders/{id}", replace: true);
+            return;
+        }
+
+        cart = await Orders.GetCartAsync(Session.Owner, Session.Cancellation);
+        Input.Revision = cart.Revision;
+        error = cart.Count == 0
+            ? "Корзина пуста. Добавьте товары и повторите оформление."
+            : "Корзина изменилась. Проверьте сумму и подтвердите заказ ещё раз.";
+    }
+}

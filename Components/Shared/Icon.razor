@@ -1,0 +1,50 @@
+<svg class="icon @Class" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    @switch (Name)
+    {
+        case "brand":
+            <path d="M3.5 10.4 12 3l8.5 7.4v9.4h-17z M9 19.8v-4a3 3 0 0 1 6 0v4" />
+            break;
+        case "truck":
+            <path d="M3 5h12v12H3z M15 9h3.5l3 3.5V17H15 M5.5 17a1.8 1.8 0 1 0 3.6 0m8.1 0a1.8 1.8 0 1 0 3.6 0" />
+            break;
+        case "bag":
+            <path d="M5 8h14l1 12H4L5 8z M9 10V6a3 3 0 0 1 6 0v4" />
+            break;
+        case "arrow":
+            <path d="M4 12h15m-6-6 6 6-6 6" />
+            break;
+        case "back":
+            <path d="M20 12H5m6-6-6 6 6 6" />
+            break;
+        case "leaf":
+            <path d="M5 18C1 8 9 4 20 4c0 10-4 17-13 15 M4 21c3-6 7-9 12-12" />
+            break;
+        case "box":
+            <path d="m12 3 9 4.5v9L12 21l-9-4.5v-9L12 3z M3 7.5 12 12l9-4.5 M12 12v9 M7.5 5.3l9 4.5" />
+            break;
+        case "plus":
+            <path d="M6 12h12m-6-6v12" />
+            break;
+        case "minus":
+            <path d="M6 12h12" />
+            break;
+        case "close":
+            <path d="m6 6 12 12m0-12L6 18" />
+            break;
+        case "check":
+            <path d="m5 12 4 4L19 6" />
+            break;
+        case "bell":
+            <path d="M9.5 20a2.5 2.5 0 0 0 5 0 M4.5 17a2 2 0 0 0 2-2v-4.5a5.5 5.5 0 0 1 11 0V15a2 2 0 0 0 2 2h-15z" />
+            break;
+        case "mail":
+            <path d="M3 6h18v12H3z M3 6l9 7 9-7" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+    [Parameter] public string? Class { get; set; }
+}

@@ -1,0 +1,40 @@
+@page "/orders"
+@inject Orders Orders
+@inject ShopSession Session
+
+<PageTitle>Мои заказы — Тихий дом</PageTitle>
+
+<section class="container subpage">
+    <a class="back-link" href="/#catalog"><Icon Name="back" /> К каталогу</a>
+    <div class="page-heading"><h1>Мои заказы</h1></div>
+    @if (history.Count == 0)
+    {
+        <div class="panel empty-state">
+            <span class="empty-icon"><Icon Name="box" /></span>
+            <h2>У вас пока нет заказов</h2>
+            <a class="button button-primary" href="/#catalog">Смотреть каталог <Icon Name="arrow" /></a>
+        </div>
+    }
+    else
+    {
+        <div class="panel lines order-list">
+            @foreach (var order in history)
+            {
+                <a class="order-link" href="@($"/orders/{order.Id}")">
+                    <div><h2>Заказ №@order.Number</h2><p>@Date(order.CreatedAt) · @ItemCount(order.Quantity)</p></div>
+                    <strong>@Money(order.Total)</strong>
+                    <Icon Name="arrow" />
+                </a>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<OrderSummary> history = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        history = await Orders.ListAsync(Session.Owner, Session.Cancellation);
+    }
+}
